@@ -34,13 +34,18 @@
   <body>
     <div class="container mt-4">
       <h1>Email a Pokemon's Abilities</h1>
+
       <div id="successMessage" class="success-message" style="display: none;">
         Email sent successfully!
       </div>
-      <div id="failSendMessage" class "failed-message" style="display: none;">
+
+      <div id="failSendMessage" class="failed-message" style="display: none;">
         Fail!
       </div>
 
+      <div id="pokefail" class="failed-message" style="display: none;">
+        Couldn't find pokemon
+      </div>
 
         <div class="mb-3">
           <label for="id_email" class="form-label">Email (separate multiple addresses with spaces):</label>
@@ -81,90 +86,90 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
-      // Maintain a list of queried Pokémon names
-      const queriedPokemonNames = [];
-
       document.getElementById("queryButton").addEventListener("click", (event) => {
-        event.preventDefault(); // Prevent form submission
+        event.preventDefault();
     
         const pokemonNames = document.getElementById("id_pokemon_name").value.split(/\s+/);
         const abilitiesTable = document.getElementById("abilitiesTable");
-    
-        // Function to fetch abilities and descriptions for a single Pokémon
-        function fetchPokemonAbilities(pokemonName) {
-            if (queriedPokemonNames.includes(pokemonName)) {
-                // Pokémon has already been queried and displayed, skip it
-                return;
-            }
-            queriedPokemonNames.push(pokemonName);
-    
+
+        function hideMessages() {
+          $("#successMessage, #failSendMessage, #pokefail").fadeOut();
+        }
+
+        function fetchAllPokemonAbilities(pokemonNames) {
+          abilitiesTable.innerHTML = '';
+        
+          pokemonNames.forEach((pokemonName) => {
             const apiUrl = `https://pokeapi.co/api/v2/pokemon/${pokemonName.toLowerCase()}`;
-    
             fetch(apiUrl)
-                .then((response) => response.json())
-                .then((data) => {
-                    // Extract abilities
-                    const abilities = data.abilities;
-                    const abilityDescriptions = [];
-    
-                    // Function to fetch ability descriptions
-                    function fetchAbilityDescription(url, index) {
-                        fetch(url)
-                            .then((response) => response.json())
-                            .then((abilityData) => {
-                                const effectEntry = abilityData.effect_entries.find(
-                                    (entry) => entry.language.name === "en"
-                                );
-                                if (effectEntry) {
-                                    abilityDescriptions[index] = effectEntry.short_effect;
-                                } else {
-                                    abilityDescriptions[index] = "No description available";
-                                }
-    
-                                if (abilityDescriptions.length === abilities.length) {
-                                    // All descriptions are fetched, display the table
-                                    const tableHTML = `<table class="table">
-                                        <thead>
-                                            <tr>
-                                                <th>Pokemon Name</th>
-                                                <th>Ability Name</th>
-                                                <th>Description</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${abilities
-                                                .map((ability, index) =>
-                                                    `<tr><td>${pokemonName}</td><td>${ability.ability.name}</td><td>${abilityDescriptions[index]}</td></tr>`
-                                                )
-                                                .join("")}
-                                        </tbody>
-                                    </table>`;
-    
-                                    // Append the table to the existing content
-                                    abilitiesTable.innerHTML += tableHTML;
-                                }
-                            })
-                            .catch((error) => {
-                                console.error(error);
-                            });
-                    }
-    
-                    // Fetch descriptions for each ability
-                    abilities.forEach((ability, index) => {
-                        fetchAbilityDescription(ability.ability.url, index);
+              .then((response) => response.json())
+              .then((data) => {
+                const abilities = data.abilities;
+                const abilityDescriptions = [];
+        
+                if (abilities.length === 0) {
+                  $("#pokefail").fadeIn();
+                  setTimeout(hideMessages, 2000);
+                  abilitiesTable.innerHTML += failMessage;
+                  return;
+                }
+        
+                function fetchAbilityDescription(url, index) {
+                  fetch(url)
+                    .then((response) => response.json())
+                    .then((abilityData) => {
+                      const effectEntry = abilityData.effect_entries.find(
+                        (entry) => entry.language.name === "en"
+                      );
+                      if (effectEntry) {
+                        abilityDescriptions[index] = effectEntry.short_effect;
+                      } else {
+                        abilityDescriptions[index] = "No description available";
+                      }
+        
+                      if (abilityDescriptions.length === abilities.length) {
+                        const tableHTML = `<table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Pokemon Name</th>
+                                    <th>Ability Name</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${abilities
+                                  .map((ability, index) =>
+                                    `<tr><td>${pokemonName}</td><td>${ability.ability.name}</td><td>${abilityDescriptions[index]}</td></tr>`
+                                  )
+                                  .join("")}
+                            </tbody>
+                        </table>`;
+                        abilitiesTable.innerHTML += tableHTML;
+                      }
+                    })
+                    .catch((error) => {
+                      console.error(error);
+                      $("#pokefail").fadeIn();
+                      setTimeout(hideMessages, 2000);
                     });
-                })
-                .catch((error) => {
-                    console.error(error);
+                }
+        
+                abilities.forEach((ability, index) => {
+                  fetchAbilityDescription(ability.ability.url, index);
                 });
+              })
+              .catch((error) => {
+                console.error(error);
+                $("#pokefail").fadeIn();
+                setTimeout(hideMessages, 2000);
+              });
+          });
         }
     
-        // Iterate through each Pokémon name and fetch their abilities
-        pokemonNames.forEach((pokemonName) => {
-            fetchPokemonAbilities(pokemonName);
-        });
+        fetchAllPokemonAbilities(pokemonNames);
       });
-    </script>
+    </script>    
+    
     <script>
       function getCookie(name) {
         var value = "; " + document.cookie;
@@ -175,33 +180,38 @@
         $("#successMessage, #failSendMessage").fadeOut();
       }
       document.getElementById("sendEmailButton").addEventListener("click", (event) => {
-        event.preventDefault(); // Prevent the default form submission
-
+        event.preventDefault();
+      
         const email = document.getElementById("id_email").value;
         const pokemonName = document.getElementById("id_pokemon_name").value;
-
+      
         $.ajax({
           url: '',
           type: 'POST',
           headers: {
-            'X-CSRFToken': getCookie("csrftoken"), // Include the CSRF token
+            'X-CSRFToken': getCookie("csrftoken"),
           },
           data: {
             email: email,
             pokemon_name: pokemonName,
           },
           success: function(data) {
-            if (data.message === 'Email sent successfully') {
+            if (data.success) {
               $("#successMessage").fadeIn();
-            } else {
+            } 
+            else {
               console.error('Email sending failed');
-              $("#failSendMessage").fadeIn();
+              if (data.message === 'Form data is invalid') {
+                $("#failSendMessage").fadeIn();
+              } else {
+                $("#failSendMessage").fadeIn();
+              }
             }
             setTimeout(hideMessages, 2000);
           },
           error: function() {
             console.error('Error sending email');
-            $("#successMessage").fadeIn();
+            $("#failSendMessage").fadeIn();
             setTimeout(hideMessages, 2000);
           },
         });

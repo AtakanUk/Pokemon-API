@@ -1,4 +1,3 @@
-# pokemon/utils.py
 import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -10,6 +9,9 @@ from django.http import HttpResponseRedirect
 from reportlab.platypus.flowables import KeepTogether
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+import PyPDF2
+import re
+import os
 
 def split_long_text(description, max_line_length=50):
     lines = []
@@ -55,3 +57,43 @@ def create_pdf(pokemon_name, abilities):
 
     doc.build(story)
     return pdf_filename
+
+def merge_pdfs(pdf_filenames):    
+    if not pdf_filenames:
+        return None
+    pdf_merger = PyPDF2.PdfMerger()
+    try:
+        for pdf_filename in pdf_filenames:
+            pdf_merger.append(pdf_filename)
+        merged_pdf_filename = 'merged.pdf'
+        pdf_merger.write(merged_pdf_filename)
+        return merged_pdf_filename
+    except Exception as e:
+        print(f"Failed to merge PDFs: {str(e)}")
+        return None
+    finally:
+        pdf_merger.close() 
+        
+def is_valid_email(email):
+    if re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        return True
+    return False        
+
+def send_email_with_pdfs(pdf_filenames, recipients):
+    msg = MIMEMultipart()
+    msg['From'] = 'atakanuk98@gmail.com'
+    msg['To'] = ', '.join(recipients)
+    msg['Subject'] = 'Pokemon Abilities'
+
+    for pdf_filename in pdf_filenames:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(open(pdf_filename, 'rb').read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', 'attachment; filename="%s"' % pdf_filename)
+        msg.attach(part)
+
+    server = SMTP_SSL('smtp.gmail.com', 465)
+    server.login("atakanuk98@gmail.com", "pboi mjsa uhom gmut")
+    server.sendmail("atakanuk98@gmail.com", recipients, msg.as_string())
+    server.quit()
+
