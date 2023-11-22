@@ -81,7 +81,7 @@ def is_valid_email(email):
 
 def send_email_with_pdfs(pdf_filenames, recipients):
     msg = MIMEMultipart()
-    msg['From'] = 'atakanuk98@gmail.com'
+    msg['From'] = 'exampleemail@mal.com'
     msg['To'] = ', '.join(recipients)
     msg['Subject'] = 'Pokemon Abilities'
 
@@ -93,7 +93,7 @@ def send_email_with_pdfs(pdf_filenames, recipients):
         msg.attach(part)
 
     server = SMTP_SSL('smtp.gmail.com', 465)
-    server.login("atakanuk98@gmail.com", "pboi mjsa uhom gmut")
-    server.sendmail("atakanuk98@gmail.com", recipients, msg.as_string())
+    server.login("exampleemail@mal.com", "password")
+    server.sendmail("exampleemail@mal.com", recipients, msg.as_string())
     server.quit()
 
